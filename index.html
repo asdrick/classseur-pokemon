@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Classeur Pokémon Pro - Rendu Holographique 3D</title>
     <style>
         :root {
@@ -30,6 +30,26 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.6);
             display: flex; justify-content: space-between;
             align-items: center; z-index: 10;
+            gap: 10px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* BOUTON MENU MOBILE */
+        .menu-toggle {
+            display: none;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--poke-yellow);
+            color: var(--poke-yellow);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
         }
 
         h1 {
@@ -43,13 +63,15 @@
         .total-value {
             font-size: 16px; color: #fff; background-color: rgba(0, 0, 0, 0.3);
             padding: 4px 10px; border-radius: 5px; border-left: 4px solid var(--poke-yellow); font-weight: bold;
+            white-space: nowrap;
         }
 
-        .main-layout { display: flex; flex: 1; overflow: hidden; }
+        .main-layout { display: flex; flex: 1; overflow: hidden; position: relative; }
 
         sidebar {
             width: 320px; background-color: #1a1a1a;
             border-right: 2px solid #2d2d2d; display: flex; flex-direction: column;
+            z-index: 8; transition: transform 0.3s ease;
         }
 
         .search-wrapper { padding: 12px; border-bottom: 1px solid #2d2d2d; }
@@ -73,7 +95,7 @@
         }
 
         .content-view { flex: 1; padding: 20px; overflow-y: auto; background-color: #141414; }
-        .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+        .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
 
         /* Grille des cartes */
         .card-container {
@@ -85,7 +107,7 @@
         .card-container:hover { transform: scale(1.03); }
         .card-img {
             width: 100%; border-radius: 8px; display: block;
-            background-color: #2a2a2a; min-height: 200px;
+            background-color: #2a2a2a; min-height: 180px;
         }
 
         .card-container.not-owned .card-img { filter: grayscale(85%) brightness(0.35); }
@@ -105,14 +127,15 @@
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(4px);
+            padding: 10px; box-sizing: border-box;
         }
 
-        .modal-content { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .modal-content { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 320px; }
         
         .card-3d-viewport { 
             perspective: 1200px; 
-            width: 300px; 
-            height: 418px; 
+            width: 260px; 
+            height: 362px; 
             cursor: grab;
         }
         
@@ -124,7 +147,6 @@
             transition: transform 0.1s ease-out;
         }
         
-        /* Propriétés communes des deux faces */
         .card-side { 
             position: absolute; 
             width: 100%; 
@@ -142,14 +164,12 @@
             display: block;
         }
         
-        /* Face Avant */
         .card-front-side { 
             background-color: #222;
             transform: rotateY(0deg);
             z-index: 2;
         }
 
-        /* SUPER COUCHE HOLOGRAPHIQUE (BRILLANCE FOIL FLUIDE) */
         .holo-foil {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -173,31 +193,70 @@
             transition: opacity 0.2s ease;
         }
         
-        /* Face Arrière (Pivotée de base à 180°) */
         .card-back-side { 
-            background: #192743; /* Sécurité si l'image saute */
+            background: #192743;
             border: 4px solid #f4b41a;
             box-sizing: border-box;
             transform: rotateY(180deg);
             z-index: 1;
         }
 
-        .modal-controls { text-align: center; background-color: #1e1e1e; padding: 15px; border-radius: 12px; border: 1px solid #333; min-width: 280px; }
-        .modal-card-title { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
-        .modal-card-price { color: var(--money-green); font-size: 18px; font-weight: bold; margin-bottom: 10px; }
-        .btn-action { padding: 8px 16px; border: none; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; margin: 0 4px; }
+        .modal-controls { text-align: center; background-color: #1e1e1e; padding: 15px; border-radius: 12px; border: 1px solid #333; width: 100%; box-sizing: border-box; }
+        .modal-card-title { font-size: 15px; font-weight: bold; margin-bottom: 4px; }
+        .modal-card-price { color: var(--money-green); font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+        .btn-action { padding: 8px 14px; border: none; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; margin: 4px 2px; }
         .btn-toggle-owned { background-color: var(--poke-blue); color: white; }
         .btn-toggle-owned.is-owned { background-color: #4caf50; }
         .btn-close-modal { background-color: #444; color: #ccc; }
 
         .hint-text { font-size: 10px; color: #aaa; margin-top: 8px; }
         .loading-text { font-size: 16px; color: #888; text-align: center; grid-column: 1 / -1; padding: 30px; }
+
+        /* --- RESPONSIVE OPTIMIZATIONS (MOBILE ET TABLETTE) --- */
+        @media (max-width: 768px) {
+            h1 { font-size: 16px; }
+            .counter { font-size: 11px; }
+            .total-value { font-size: 13px; padding: 3px 8px; }
+
+            .menu-toggle {
+                display: block; /* Affiche le bouton menu sur téléphone */
+            }
+
+            sidebar {
+                position: absolute;
+                top: 0; left: 0; bottom: 0;
+                width: 280px;
+                transform: translateX(-100%); /* Masqué par défaut à gauche */
+                box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+            }
+
+            sidebar.open {
+                transform: translateX(0); /* S'ouvre par dessus les cartes */
+            }
+
+            .content-view {
+                padding: 12px;
+            }
+
+            .grid-cards { 
+                grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
+                gap: 10px; 
+            }
+            .card-img { min-height: 150px; }
+            .card-info { font-size: 10px; }
+
+            /* Ajustement taille modal 3D sur petit écran */
+            .card-3d-viewport { width: 220px; height: 306px; }
+        }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Mon Classeur Pokémon Ultra-Fast 3D Holo</h1>
+        <div class="header-left">
+            <button class="menu-toggle" id="menu-btn" onclick="toggleSidebar()">☰ Séries</button>
+            <h1>Mon Classeur Pro 3D</h1>
+        </div>
         <div class="stats-container">
             <div class="counter" id="total-stats">Initialisation...</div>
             <div class="total-value" id="total-value">Valeur : 0.00 €</div>
@@ -205,30 +264,27 @@
     </header>
 
     <div class="main-layout">
-        <sidebar>
+        <sidebar id="sidebar-menu">
             <div class="search-wrapper">
                 <input type="text" id="search-input" class="search-box" placeholder="Rechercher une extension...">
             </div>
             <div class="set-list" id="sets-container"></div>
         </sidebar>
 
-        <div class="content-view">
-            <h2 id="current-set-heading" style="color: var(--poke-yellow); margin-top: 0; font-size: 20px;">Chargement...</h2>
+        <div class="content-view" onclick="closeSidebarMobile()">
+            <h2 id="current-set-heading" style="color: var(--poke-yellow); margin-top: 0; font-size: 18px;">Chargement...</h2>
             <div class="grid-cards" id="cards-container"></div>
         </div>
     </div>
 
-    <!-- WINDOW MODAL DE PREVIEW ÉCRAN GÉANT -->
     <div class="modal-overlay" id="card-modal">
         <div class="modal-content">
             <div class="card-3d-viewport" id="viewport-3d">
                 <div class="card-3d-inner" id="card-inner-3d">
-                    <!-- Face Avant -->
                     <div class="card-side card-front-side">
                         <div class="holo-foil" id="modal-holo-layer"></div>
                         <img id="modal-img-front" src="" alt="Front">
                     </div>
-                    <!-- Face Arrière Réparée -->
                     <div class="card-side card-back-side">
                         <img src="https://assets.tcgdex.net/cardback.png" alt="Dos Pokémon" onerror="this.src='https://images.pokemontcg.io/cel25/25_hierarchy.png'">
                     </div>
@@ -239,7 +295,7 @@
                 <div class="modal-card-price" id="modal-card-price">0.00 €</div>
                 <button class="btn-action btn-toggle-owned" id="modal-btn-collect">Ajouter</button>
                 <button class="btn-action btn-close-modal" id="modal-btn-close">Fermer</button>
-                <div class="hint-text">✨ Bouge ton curseur pour faire briller • Clique sur la carte pour la retourner !</div>
+                <div class="hint-text">✨ Bouge / Glisse pour faire briller • Clique pour retourner !</div>
             </div>
         </div>
     </div>
@@ -251,6 +307,18 @@
         let activeCardData = null;
         let isCardFlipped = false;
         let currentRenderTimeout = null;
+
+        // FONCTIONS RESPONSIVES POUR LE MENU LATÉRAL
+        function toggleSidebar() {
+            document.getElementById('sidebar-menu').classList.toggle('open');
+        }
+
+        function closeSidebarMobile() {
+            // Ferme le menu si on clique sur la zone des cartes (uniquement sur mobile)
+            if(window.innerWidth <= 768) {
+                document.getElementById('sidebar-menu').classList.remove('open');
+            }
+        }
 
         async function loadSets() {
             const localCache = localStorage.getItem('pokemon_sets_v3_cache');
@@ -265,7 +333,6 @@
                 const response = await fetch(`${API_URL}/sets`);
                 const data = await response.json();
                 
-                // Prend absolument TOUTES les séries sans aucun filtre restrictif
                 allSets = data.sort((a, b) => new Date(a.releaseDate || '1970-01-01') - new Date(b.releaseDate || '1970-01-01'));
                 localStorage.setItem('pokemon_sets_v3_cache', JSON.stringify(allSets));
                 
@@ -288,7 +355,10 @@
                 const btn = document.createElement('button');
                 btn.className = 'set-item';
                 btn.id = `set-${set.id}`;
-                btn.onclick = () => selectSet(set.id, set.name);
+                btn.onclick = () => {
+                    selectSet(set.id, set.name);
+                    closeSidebarMobile(); // Ferme auto le menu sur mobile après sélection
+                };
 
                 const logo = document.createElement('img');
                 logo.className = 'set-logo';
@@ -422,11 +492,10 @@
             const count = Object.keys(ownedCards).length;
             let totalMoney = 0;
             Object.values(ownedCards).forEach(p => totalMoney += Number(p) || 0);
-            document.getElementById('total-stats').innerText = `Cartes possédées : ${count}`;
-            document.getElementById('total-value').innerText = `Valeur : ${totalMoney.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €`;
+            document.getElementById('total-stats').innerText = `Possédées : ${count}`;
+            document.getElementById('total-value').innerText = `${totalMoney.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €`;
         }
 
-        // CONTROL ET LOGIQUE PHYSIQUE 3D + EFFET HOLOGRAPHIQUE
         const modal = document.getElementById('card-modal');
         const viewport3d = document.getElementById('viewport-3d');
         const cardInner3d = document.getElementById('card-inner-3d');
@@ -440,7 +509,6 @@
             document.getElementById('modal-card-title').innerText = card.name;
             document.getElementById('modal-card-price').innerText = `${price.toFixed(2)} €`;
             
-            // Reset complet d'orientation
             cardInner3d.style.transform = 'rotateY(0deg) rotateX(0deg)';
             holoLayer.style.opacity = '0';
             
@@ -452,56 +520,56 @@
             const btn = document.getElementById('modal-btn-collect');
             if(!btn) return;
             if (ownedCards[cardId] !== undefined) {
-                btn.innerText = "✓ Retirer du classeur";
+                btn.innerText = "✓ Retirer";
                 btn.classList.add('is-owned');
             } else {
-                btn.innerText = "Ajouter au classeur";
+                btn.innerText = "Ajouter";
                 btn.classList.remove('is-owned');
             }
         }
 
-        // Détection souris pour inclinaison 3D + Balayage de la lumière holographique
-        viewport3d.addEventListener('mousemove', (e) => {
+        // Support souris ET tactile (Touch) pour l'effet 3D
+        function handleMove(clientX, clientY) {
             const rect = viewport3d.getBoundingClientRect();
-            
-            // Calcul de la position relative du curseur (-1 à 1)
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
+            const x = clientX - rect.left - rect.width / 2;
+            const y = clientY - rect.top - rect.height / 2;
             
             const tiltX = -y / 4; 
             const tiltY = x / 4;
             
-            // Angle de base (0 si face avant, 180 si face arrière)
             const baseFlip = isCardFlipped ? 180 : 0;
             cardInner3d.style.transform = `rotateX(${tiltX}deg) rotateY(${baseFlip + tiltY}deg)`;
 
-            // GESTION DU REFLET BRILLANT (Uniquement visible sur la face avant)
             if (!isCardFlipped) {
-                const px = ((e.clientX - rect.left) / rect.width) * 100;
-                const py = ((e.clientY - rect.top) / rect.height) * 100;
-                
-                holoLayer.style.opacity = '0.55'; // Intensité de la brillance
+                const px = ((clientX - rect.left) / rect.width) * 100;
+                const py = ((clientY - rect.top) / rect.height) * 100;
+                holoLayer.style.opacity = '0.55';
                 holoLayer.style.backgroundPosition = `${px}% ${py}%`;
             } else {
                 holoLayer.style.opacity = '0';
             }
-        });
+        }
 
-        // Sortie de curseur : Remise à plat douce
+        viewport3d.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+        viewport3d.addEventListener('touchmove', (e) => {
+            if(e.touches.length > 0) {
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, {passive: true});
+
         viewport3d.addEventListener('mouseleave', () => {
             cardInner3d.style.transform = isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
             holoLayer.style.opacity = '0';
         });
+        viewport3d.addEventListener('touchend', () => {
+            cardInner3d.style.transform = isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+            holoLayer.style.opacity = '0';
+        });
 
-        // Clic sur la carte : Retournement parfait à 180°
         viewport3d.addEventListener('click', () => {
             isCardFlipped = !isCardFlipped;
             cardInner3d.style.transform = isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
-            
-            // Désactiver instantanément le foil si face cachée
-            if(isCardFlipped) {
-                holoLayer.style.opacity = '0';
-            }
+            if(isCardFlipped) holoLayer.style.opacity = '0';
         });
 
         document.getElementById('modal-btn-collect').onclick = () => {
