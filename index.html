@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>PokéClasseur Pro 3D — Élite</title>
+    <title>PokéClasseur Pro 3D — Élite v5</title>
     <style>
         :root {
             --poke-red: #ef5350;
@@ -105,7 +105,6 @@
             background-color: rgba(255,255,255,0.02); border-radius: 4px; padding: 2px; flex-shrink: 0;
         }
 
-        /* Barre de progression des extensions */
         .set-progress-container { width: 100%; margin-top: 6px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: #666; }
         .set-progress-bar-bg { flex: 1; height: 5px; background-color: #2b2b2b; border-radius: 3px; overflow: hidden; }
         .set-progress-bar-fill { height: 100%; width: 0%; background-color: var(--poke-blue); transition: width 0.3s ease; }
@@ -113,7 +112,6 @@
 
         .content-view { flex: 1; padding: 24px; overflow-y: auto; background-color: #0e0e0e; }
 
-        /* Bloc d'outils et tris (Nouveau) */
         .toolbar-panel {
             background-color: #141414; border: 1px solid #222; padding: 14px 20px; border-radius: 12px;
             margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between;
@@ -136,26 +134,40 @@
         }
         .summary-val { font-size: 24px; font-weight: 800; color: var(--money-green); text-shadow: 0 0 10px rgba(0,230,118,0.3); }
 
-        .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 24px; }
+        /* REFACHTAGE DE LA GRILLE POUR PERMETTRE LE DOUBLE SENS (FLIP 3D) */
+        .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 24px; }
+
+        .card-perspective { perspective: 1000px; height: 310px; position: relative; }
 
         .card-container {
-            background-color: var(--card-bg); border-radius: 14px; padding: 10px;
-            text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-            cursor: pointer; position: relative; will-change: transform;
-            display: flex; flex-direction: column; justify-content: space-between;
-            border: 1px solid #222; transition: transform 0.15s ease, border-color 0.15s ease;
+            width: 100%; height: 100%; position: absolute;
+            transform-style: preserve-3d; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
         }
-        .card-container:hover { transform: translateY(-4px) scale(1.02); }
-        .card-img {
-            width: 100%; border-radius: 10px; display: block;
-            background-color: #202020; min-height: 215px; transition: opacity 0.2s;
+        
+        .card-container.flipped { transform: rotateY(180deg); }
+
+        .card-face {
+            position: absolute; width: 100%; height: 100%;
+            background-color: var(--card-bg); border-radius: 14px; padding: 10px;
+            box-sizing: border-box; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            backface-visibility: hidden; border: 1px solid #222;
+            display: flex; flex-direction: column; justify-content: space-between;
         }
 
-        .card-container.not-owned { opacity: 0.65; }
-        .card-container.owned { border-color: #444; opacity: 1; }
+        .card-face-front { z-index: 2; transform: rotateY(0deg); }
+        .card-face-back { z-index: 1; transform: rotateY(180deg); }
+
+        .card-img {
+            width: 100%; border-radius: 10px; display: block;
+            background-color: #202020; min-height: 200px; object-fit: contain;
+        }
+        .card-face-back .card-img { min-height: 235px; margin-top: 10px; }
+
+        .card-perspective.not-owned { opacity: 0.65; }
+        .card-perspective.owned .card-face-front { border-color: #444; }
         
-        /* AURA LUMINEUSE ULTRARARE (Nouvelle) */
-        .card-container.ultra-rare-glow {
+        .card-perspective.ultra-rare-glow .card-face-front {
             border-color: #ffb300;
             box-shadow: 0 0 15px rgba(255, 179, 0, 0.45), inset 0 0 10px rgba(255, 179, 0, 0.2);
             animation: pulseGlow 2s infinite alternate;
@@ -169,9 +181,9 @@
         .card-set-tag { font-size: 10px; color: #777; margin-top: 2px; text-transform: uppercase; font-weight: 600; }
 
         .card-price-tag {
-            margin-top: 8px; font-size: 13px; font-weight: 800; color: var(--money-green);
+            margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--money-green);
             background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.2);
-            padding: 5px; border-radius: 6px;
+            padding: 4px; border-radius: 6px;
         }
 
         .quick-check {
@@ -180,7 +192,16 @@
             color: #888; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 5;
             box-shadow: 0 2px 6px rgba(0,0,0,0.5); font-size: 13px; transition: 0.15s;
         }
-        .card-container.owned .quick-check { background-color: var(--money-green); border-color: #fff; color: #000; }
+        .card-perspective.owned .quick-check { background-color: var(--money-green); border-color: #fff; color: #000; }
+
+        /* BOUTON FLIP SUR LES CARTES DE LA GRILLE */
+        .btn-card-flip {
+            position: absolute; bottom: 8px; right: 8px; width: 26px; height: 26px;
+            background-color: rgba(0,0,0,0.7); border: 1px solid #444; color: #aaa;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.15s; z-index: 6;
+        }
+        .btn-card-flip:hover { background-color: #fff; color: #000; border-color: #fff; }
 
         /* Fenêtre Contextuelle 3D */
         .modal-overlay {
@@ -246,8 +267,10 @@
             }
             sidebar.open { transform: translateX(0); }
             .content-view { padding: 16px; }
-            .grid-cards { grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 14px; }
-            .card-img { min-height: 155px; }
+            .grid-cards { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px; }
+            .card-perspective { height: 260px; }
+            .card-img { min-height: 140px; }
+            .card-face-back .card-img { min-height: 180px; }
             .toolbar-panel { padding: 12px; }
             
             .modal-content { flex-direction: column; gap: 20px; padding: 20px; max-width: 310px; margin: auto; }
@@ -298,7 +321,7 @@
             
             <div class="toolbar-panel">
                 <div class="toolbar-left">
-                    <input type="text" id="card-search-input" class="search-box" placeholder="🔍 Filtrer rapidement par nom de carte...">
+                    <input type="text" id="card-search-input" class="search-box" placeholder="🔍 Taper un nom OU le numéro de la carte (ex: 4)...">
                 </div>
                 <div class="toolbar-filters">
                     <span style="font-size: 11px; text-transform:uppercase; font-weight:700; color:#555; margin-right:5px;">Tri :</span>
@@ -369,8 +392,8 @@
         let isCardFlipped = false;
         let globalPriceCache = JSON.parse(localStorage.getItem('pokemon_prices_cache')) || {};
         
-        let currentMode = 'set'; // 'set' ou 'collection'
-        let currentSort = 'number'; // 'number' ou 'price'
+        let currentMode = 'set'; 
+        let currentSort = 'number'; 
         let filterUltraRares = false;
         let currentLoadedCards = []; 
 
@@ -413,13 +436,6 @@
             } catch (error) { console.error(error); }
         }
 
-        // Calcule le taux de complétion par set
-        function getSetProgress(setId) {
-            if (!allSets.find(s => s.id === setId)) return { owned: 0, total: 0, pct: 0 };
-            const ownedInSet = Object.keys(ownedCards).filter(id => id.startsWith(setId + '-')).length;
-            return ownedInSet;
-        }
-
         function renderSets(sets) {
             const container = document.getElementById('sets-container');
             container.innerHTML = '';
@@ -447,7 +463,6 @@
                 rowTop.appendChild(text);
                 btn.appendChild(rowTop);
 
-                // Ajout de la barre de progression
                 const ownedInSet = Object.keys(ownedCards).filter(id => id.startsWith(set.id + '-')).length;
                 if (ownedInSet > 0) {
                     const totalCount = set.cardCount || 100;
@@ -528,7 +543,6 @@
             }
 
             try {
-                // Chargement optimisé par petits paquets
                 for (let i = 0; i < cardIds.length; i += 6) {
                     const chunk = cardIds.slice(i, i + 6);
                     const promises = chunk.map(id => fetch(`${API_URL}/cards/${id}`).then(res => res.json()).catch(() => null));
@@ -549,11 +563,9 @@
             }
         }
 
-        // Applique les tris et filtres définis par le panneau utilisateur
         function applyFiltersAndRender() {
             let processed = [...currentLoadedCards];
 
-            // 1. Filtrer uniquement les Ultra Rares si activé
             if (filterUltraRares) {
                 processed = processed.filter(card => {
                     const name = (card.rarity || '').toLowerCase();
@@ -561,7 +573,6 @@
                 });
             }
 
-            // 2. Traitement du Tri choisi
             if (currentSort === 'price' && currentMode === 'collection') {
                 processed.sort((a, b) => {
                     const priceA = globalPriceCache[a.id] ? globalPriceCache[a.id].min : 0;
@@ -569,7 +580,6 @@
                     return priceB - priceA;
                 });
             } else {
-                // Tri par numéro classique de série
                 processed.sort((a, b) => {
                     return parseInt(a.localId) - parseInt(b.localId) || (a.localId > b.localId ? 1 : -1);
                 });
@@ -594,52 +604,76 @@
                 const imgUrl = card.image ? `${card.image}/low.jpg` : 'https://assets.tcgdex.net/cardback.png';
                 const totalCount = card.set ? (card.set.cardCount || '?') : '?';
 
-                const cardNode = document.createElement('div');
-                cardNode.className = `card-container ${isOwned ? 'owned' : 'not-owned'}`;
-                cardNode.id = `grid-card-${card.id}`;
-                cardNode.dataset.cardid = card.id;
-                cardNode.dataset.cardname = card.name.toLowerCase();
+                // Conteneur de perspective pour le flip 3D globale
+                const perspectiveNode = document.createElement('div');
+                perspectiveNode.className = `card-perspective ${isOwned ? 'owned' : 'not-owned'}`;
+                perspectiveNode.id = `perspective-${card.id}`;
+                perspectiveNode.dataset.cardid = card.id;
+                perspectiveNode.dataset.cardname = card.name.toLowerCase();
+                perspectiveNode.dataset.cardnumber = card.localId; // Stockage du numéro brut pour recherche instantanée
+
+                // Double face de carte
+                const innerContainer = document.createElement('div');
+                innerContainer.className = 'card-container';
+                innerContainer.id = `grid-card-${card.id}`;
 
                 let priceHTML = '';
                 if (currentMode === 'collection') {
                     if (globalPriceCache[card.id]) {
                         const p = globalPriceCache[card.id];
                         priceHTML = `<div class="card-price-tag" id="price-tag-${card.id}">${p.min > 0 ? p.min.toFixed(2) + ' €' : '-- €'}</div>`;
-                        
-                        // Si la carte vaut plus de 15€, on lui donne une aura premium
-                        if (p.min >= 15) {
-                            cardNode.classList.add('ultra-rare-glow');
-                        }
+                        if (p.min >= 15) perspectiveNode.classList.add('ultra-rare-glow');
                     } else {
                         priceHTML = `<div class="card-price-tag" id="price-tag-${card.id}">Calcul...</div>`;
                     }
                 }
 
-                cardNode.innerHTML = `
+                // Face Recto
+                const faceFront = document.createElement('div');
+                faceFront.className = 'card-face card-face-front';
+                faceFront.innerHTML = `
                     <div class="quick-check" id="check-${card.id}">✓</div>
                     <img class="card-img" src="${imgUrl}" alt="${card.name}" loading="lazy" onerror="this.src='https://assets.tcgdex.net/cardback.png'">
                     <div class="card-info">${card.localId}/${totalCount} - ${card.name}</div>
                     <div class="card-set-tag">${card.set ? card.set.name : ''}</div>
                     ${priceHTML}
+                    <div class="btn-card-flip" title="Voir le dos">⟳</div>
                 `;
 
-                cardNode.onclick = (e) => {
+                // Face Verso (Le dos de la carte)
+                const faceBack = document.createElement('div');
+                faceBack.className = 'card-face card-face-back';
+                faceBack.innerHTML = `
+                    <img class="card-img" src="https://assets.tcgdex.net/cardback.png" alt="Dos Pokémon officiel">
+                    <div class="card-info" style="color: var(--poke-yellow);">Dos de la Carte</div>
+                    <div class="card-set-tag">Standard TCG</div>
+                    <div class="btn-card-flip" title="Voir le recto">⟳</div>
+                `;
+
+                innerContainer.appendChild(faceFront);
+                innerContainer.appendChild(faceBack);
+                perspectiveNode.appendChild(innerContainer);
+
+                // Gestionnaire de clics configurés selon la zone visée
+                perspectiveNode.onclick = (e) => {
                     if(e.target.classList.contains('quick-check')) {
                         e.stopPropagation();
-                        toggleCardOwned(card.id, cardNode);
+                        toggleCardOwned(card.id, perspectiveNode);
+                    } else if (e.target.classList.contains('btn-card-flip')) {
+                        e.stopPropagation();
+                        innerContainer.classList.toggle('flipped'); // Animation flip du conteneur parent
                     } else {
                         openCardModal(card, imgUrl, totalCount);
                     }
                 };
 
-                fragment.appendChild(cardNode);
-                cardObserver.observe(cardNode);
+                fragment.appendChild(perspectiveNode);
+                cardObserver.observe(perspectiveNode);
             });
 
             cardsContainer.appendChild(fragment);
         }
 
-        // Fonctions pour manipuler les tris
         function changeSort(type) {
             currentSort = type;
             document.getElementById('filter-sort-num').classList.toggle('active', type === 'number');
@@ -653,7 +687,6 @@
             applyFiltersAndRender();
         }
 
-        // Gestion asynchrone de chargement des prix
         function queuePriceFetch(cardId) {
             if (globalPriceCache[cardId]) return;
             if (priceQueue.includes(cardId)) return;
@@ -668,7 +701,6 @@
             }
             isProcessingQueue = true;
             const cardId = priceQueue.shift();
-
             await fetchRealRangePrice(cardId);
             setTimeout(processPriceQueue, 40);
         }
@@ -695,7 +727,7 @@
                 if(tag) {
                     tag.innerText = `${minPrice.toFixed(2)} €`;
                     if(minPrice >= 15) {
-                        document.getElementById(`grid-card-${cardId}`)?.classList.add('ultra-rare-glow');
+                        document.getElementById(`perspective-${cardId}`)?.classList.add('ultra-rare-glow');
                     }
                 }
                 
@@ -705,7 +737,6 @@
             }
         }
 
-        // Fait le total financier de la collection de l'utilisateur
         function calculateGlobalCollectionValue() {
             let total = 0;
             Object.keys(ownedCards).forEach(id => {
@@ -718,27 +749,27 @@
         }
 
         function toggleCardOwned(cardId, element = null) {
-            const gridCard = element || document.getElementById(`grid-card-${cardId}`);
+            const perspectiveCard = element || document.getElementById(`perspective-${cardId}`);
             
             if (ownedCards[cardId] !== undefined) {
                 delete ownedCards[cardId];
-                if(gridCard) { 
+                if(perspectiveCard) { 
                     if (currentMode === 'collection') {
-                        gridCard.remove();
+                        perspectiveCard.remove();
                     } else {
-                        gridCard.classList.remove('owned'); 
-                        gridCard.classList.add('not-owned'); 
+                        perspectiveCard.classList.remove('owned'); 
+                        perspectiveCard.classList.add('not-owned'); 
                     }
                 }
             } else {
                 ownedCards[cardId] = true;
-                if(gridCard) { gridCard.classList.remove('not-owned'); gridCard.classList.add('owned'); }
+                if(perspectiveCard) { perspectiveCard.classList.remove('not-owned'); perspectiveCard.classList.add('owned'); }
             }
             
             localStorage.setItem('pokemon_3d_binder_v4_clean', JSON.stringify(ownedCards));
             updateGlobalStats();
             updateModalButtonState(cardId);
-            renderSets(allSets); // Actualise les mini barres à gauche
+            renderSets(allSets); 
 
             if (currentMode === 'collection') {
                 calculateGlobalCollectionValue();
@@ -753,7 +784,6 @@
             document.getElementById('total-stats').innerText = `Inventaire : ${count} / ${allSets.reduce((acc, s) => acc + (s.cardCount || 0), 0)} cartes`;
         }
 
-        // Logique de Visionneuse 3D
         const modal = document.getElementById('card-modal');
         const viewport3d = document.getElementById('viewport-3d');
         const cardInner3d = document.getElementById('card-inner-3d');
@@ -831,26 +861,35 @@
 
         document.getElementById('modal-btn-collect').onclick = () => {
             if(activeCardData) {
-                const gridNode = document.getElementById(`grid-card-${activeCardData.id}`);
-                toggleCardOwned(activeCardData.id, gridNode);
+                const pNode = document.getElementById(`perspective-${activeCardData.id}`);
+                toggleCardOwned(activeCardData.id, pNode);
             }
         };
         
         document.getElementById('modal-btn-close').onclick = () => modal.style.display = 'none';
         modal.onclick = (e) => { if(e.target === modal) modal.style.display = 'none'; };
 
-        // Événements d'inputs pour recherches textuelles
         document.getElementById('search-input').addEventListener('input', (e) => {
             const search = e.target.value.toLowerCase();
             const filtered = allSets.filter(set => set.name.toLowerCase().includes(search));
             renderSets(filtered);
         });
 
+        // SYSTEME DE NUMEROS ET RECHERCHE AVANCEE INTELLIGENTE
         document.getElementById('card-search-input').addEventListener('input', (e) => {
-            const searchVal = e.target.value.toLowerCase();
-            document.querySelectorAll('.card-container').forEach(cardNode => {
+            const searchVal = e.target.value.trim().toLowerCase();
+            const allCardsNodes = document.querySelectorAll('.card-perspective');
+            
+            allCardsNodes.forEach(cardNode => {
                 const name = cardNode.dataset.cardname || '';
-                cardNode.style.display = name.includes(searchVal) ? 'flex' : 'none';
+                const number = cardNode.dataset.cardnumber || ''; // Numéro de la carte
+                
+                // Si la recherche correspond au nom OU exactement au numéro de carte
+                if (name.includes(searchVal) || number === searchVal || parseInt(number) === parseInt(searchVal)) {
+                    cardNode.style.display = 'block';
+                } else {
+                    cardNode.style.display = 'none';
+                }
             });
         });
 
