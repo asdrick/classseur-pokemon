@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Classeur Pokémon Pro - Rendu Holographique 3D</title>
+    <title>Mon Classeur Pro 3D - Collection</title>
     <style>
         :root {
             --poke-red: #ef5350;
@@ -12,7 +12,7 @@
             --dark-bg: #121212;
             --card-bg: #1e1e1e;
             --text-light: #e0e0e0;
-            --money-green: #4caf50;
+            --info-blue: #0288d1;
         }
 
         body {
@@ -30,7 +30,6 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.6);
             display: flex; justify-content: space-between;
             align-items: center; z-index: 10;
-            gap: 10px;
         }
 
         .header-left {
@@ -39,7 +38,6 @@
             gap: 15px;
         }
 
-        /* BOUTON MENU MOBILE */
         .menu-toggle {
             display: none;
             background: rgba(0, 0, 0, 0.3);
@@ -59,10 +57,9 @@
         }
 
         .stats-container { text-align: right; display: flex; flex-direction: column; gap: 2px; }
-        .counter { font-weight: bold; font-size: 14px; }
-        .total-value {
-            font-size: 16px; color: #fff; background-color: rgba(0, 0, 0, 0.3);
-            padding: 4px 10px; border-radius: 5px; border-left: 4px solid var(--poke-yellow); font-weight: bold;
+        .counter { 
+            font-weight: bold; font-size: 15px; color: #fff; background-color: rgba(0, 0, 0, 0.3);
+            padding: 6px 12px; border-radius: 5px; border-left: 4px solid var(--poke-yellow); 
             white-space: nowrap;
         }
 
@@ -95,25 +92,37 @@
         }
 
         .content-view { flex: 1; padding: 20px; overflow-y: auto; background-color: #141414; }
-        .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
 
-        /* Grille des cartes */
+        .market-banner {
+            background-color: rgba(30, 30, 30, 0.6);
+            border-left: 4px solid var(--info-blue);
+            color: #fff; padding: 15px; border-radius: 8px;
+            margin-bottom: 20px; font-size: 13px; line-height: 1.5;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        
+        .market-banner ul { margin: 5px 0 0 0; padding-left: 20px; color: #bbb; }
+        .market-banner strong { color: var(--poke-yellow); }
+
+        .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+
         .card-container {
             background-color: var(--card-bg); border-radius: 12px; padding: 8px;
             text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.4);
             cursor: pointer; position: relative; will-change: transform;
+            transition: transform 0.2s ease, outline 0.2s ease;
         }
 
         .card-container:hover { transform: scale(1.03); }
         .card-img {
             width: 100%; border-radius: 8px; display: block;
-            background-color: #2a2a2a; min-height: 180px;
+            background-color: #2a2a2a; min-height: 200px;
         }
 
-        .card-container.not-owned .card-img { filter: grayscale(85%) brightness(0.35); }
-        .card-container.owned { outline: 3px solid var(--poke-yellow); box-shadow: 0 0 12px rgba(255, 203, 5, 0.4); }
-        .card-info { margin-top: 8px; font-size: 11px; font-weight: bold; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-price-tag { margin-top: 4px; font-size: 11px; font-weight: bold; color: var(--money-green); background-color: rgba(76, 175, 80, 0.12); padding: 2px 6px; border-radius: 4px; display: inline-block; }
+        .card-container.not-owned .card-img { filter: none; opacity: 0.85; }
+        .card-container.owned { outline: 3px solid var(--poke-yellow); box-shadow: 0 0 12px rgba(255, 203, 5, 0.5); }
+        
+        .card-info { margin-top: 8px; font-size: 11px; font-weight: bold; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-bottom: 5px; }
 
         .quick-check {
             position: absolute; top: 5px; right: 5px; width: 26px; height: 26px;
@@ -123,130 +132,81 @@
 
         .card-container.owned .quick-check { background-color: #4caf50; border-color: var(--poke-yellow); }
 
-        /* STRUCTURE MODAL ET VISIONNEUSE MOTEUR 3D UNIFIÉ */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(4px);
-            padding: 10px; box-sizing: border-box;
         }
 
-        .modal-content { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 320px; }
+        .modal-content { 
+            display: flex; flex-direction: row; align-items: flex-start; gap: 25px; 
+            width: 100%; max-width: 720px; background-color: #1e1e1e; padding: 25px; 
+            border-radius: 16px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+        }
         
         .card-3d-viewport { 
             perspective: 1200px; 
-            width: 260px; 
-            height: 362px; 
+            width: 250px; 
+            height: 348px; 
             cursor: grab;
+            flex-shrink: 0;
+            margin: auto;
         }
         
         .card-3d-inner { 
-            width: 100%; 
-            height: 100%; 
-            position: relative; 
-            transform-style: preserve-3d; 
-            transition: transform 0.1s ease-out;
+            width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.1s ease-out;
         }
         
         .card-side { 
-            position: absolute; 
-            width: 100%; 
-            height: 100%; 
-            border-radius: 14px; 
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.7); 
+            position: absolute; width: 100%; height: 100%; border-radius: 14px; backface-visibility: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.5); 
         }
 
-        .card-side img {
-            width: 100%;
-            height: 100%;
-            border-radius: 14px;
-            display: block;
-        }
-        
-        .card-front-side { 
-            background-color: #222;
-            transform: rotateY(0deg);
-            z-index: 2;
-        }
+        .card-side img { width: 100%; height: 100%; border-radius: 14px; display: block; }
+        .card-front-side { background-color: #222; transform: rotateY(0deg); z-index: 2; }
+        .card-back-side { background: #192743; border: 4px solid #f4b41a; box-sizing: border-box; transform: rotateY(180deg); z-index: 1; }
 
         .holo-foil {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            border-radius: 14px;
-            z-index: 3;
-            pointer-events: none;
-            mix-blend-mode: color-dodge;
-            opacity: 0;
-            background: linear-gradient(
-                115deg,
-                transparent 10%,
-                rgba(255, 255, 255, 0.15) 25%,
-                rgba(100, 200, 255, 0.35) 42%,
-                rgba(255, 100, 255, 0.35) 50%,
-                rgba(255, 255, 100, 0.35) 58%,
-                rgba(255, 255, 255, 0.15) 75%,
-                transparent 90%
-            );
-            background-size: 250% 250%;
-            background-position: 50% 50%;
-            transition: opacity 0.2s ease;
-        }
-        
-        .card-back-side { 
-            background: #192743;
-            border: 4px solid #f4b41a;
-            box-sizing: border-box;
-            transform: rotateY(180deg);
-            z-index: 1;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 14px; z-index: 3;
+            pointer-events: none; mix-blend-mode: color-dodge; opacity: 0;
+            background: linear-gradient(115deg, transparent 10%, rgba(255, 255, 255, 0.15) 25%, rgba(100, 200, 255, 0.35) 42%, rgba(255, 100, 255, 0.35) 50%, rgba(255, 255, 100, 0.35) 58%, rgba(255, 255, 255, 0.15) 75%, transparent 90%);
+            background-size: 250% 250%; background-position: 50% 50%; transition: opacity 0.2s ease;
         }
 
-        .modal-controls { text-align: center; background-color: #1e1e1e; padding: 15px; border-radius: 12px; border: 1px solid #333; width: 100%; box-sizing: border-box; }
-        .modal-card-title { font-size: 15px; font-weight: bold; margin-bottom: 4px; }
-        .modal-card-price { color: var(--money-green); font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-        .btn-action { padding: 8px 14px; border: none; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; margin: 4px 2px; }
+        .modal-controls { flex: 1; display: flex; flex-direction: column; width: 100%; }
+        .modal-card-title { font-size: 22px; font-weight: bold; margin-bottom: 2px; color: #fff; }
+        .modal-card-subtitle { font-size: 12px; color: #888; margin-bottom: 12px; font-style: italic; }
+
+        .info-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; font-size: 13px; color: #ccc; }
+        .info-table td { padding: 8px 0; border-bottom: 1px solid #2d2d2d; }
+        .info-table td.title { font-weight: bold; }
+        .info-table td.value { text-align: right; color: #fff; }
+
+        .actions-row { display: flex; gap: 10px; margin-top: auto; }
+        .btn-action { flex: 1; padding: 12px 16px; border: none; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; }
         .btn-toggle-owned { background-color: var(--poke-blue); color: white; }
         .btn-toggle-owned.is-owned { background-color: #4caf50; }
         .btn-close-modal { background-color: #444; color: #ccc; }
 
-        .hint-text { font-size: 10px; color: #aaa; margin-top: 8px; }
+        .hint-text { font-size: 12px; color: #aaa; margin-top: 12px; text-align: center; }
         .loading-text { font-size: 16px; color: #888; text-align: center; grid-column: 1 / -1; padding: 30px; }
 
-        /* --- RESPONSIVE OPTIMIZATIONS (MOBILE ET TABLETTE) --- */
         @media (max-width: 768px) {
-            h1 { font-size: 16px; }
-            .counter { font-size: 11px; }
-            .total-value { font-size: 13px; padding: 3px 8px; }
-
-            .menu-toggle {
-                display: block; /* Affiche le bouton menu sur téléphone */
-            }
+            h1 { font-size: 15px; }
+            .counter { font-size: 13px; }
+            .menu-toggle { display: block; }
 
             sidebar {
-                position: absolute;
-                top: 0; left: 0; bottom: 0;
-                width: 280px;
-                transform: translateX(-100%); /* Masqué par défaut à gauche */
-                box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+                position: absolute; top: 0; left: 0; bottom: 0; width: 280px;
+                transform: translateX(-100%); box-shadow: 5px 0 15px rgba(0,0,0,0.5);
             }
-
-            sidebar.open {
-                transform: translateX(0); /* S'ouvre par dessus les cartes */
-            }
-
-            .content-view {
-                padding: 12px;
-            }
-
-            .grid-cards { 
-                grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
-                gap: 10px; 
-            }
+            sidebar.open { transform: translateX(0); }
+            .content-view { padding: 12px; }
+            .grid-cards { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
             .card-img { min-height: 150px; }
             .card-info { font-size: 10px; }
 
-            /* Ajustement taille modal 3D sur petit écran */
-            .card-3d-viewport { width: 220px; height: 306px; }
+            .modal-content { flex-direction: column; gap: 15px; padding: 15px; max-width: 330px; margin: auto; }
+            .card-3d-viewport { width: 190px; height: 265px; }
+            .modal-card-title { font-size: 18px; text-align: center; margin-bottom: 2px; }
         }
     </style>
 </head>
@@ -259,7 +219,6 @@
         </div>
         <div class="stats-container">
             <div class="counter" id="total-stats">Initialisation...</div>
-            <div class="total-value" id="total-value">Valeur : 0.00 €</div>
         </div>
     </header>
 
@@ -273,6 +232,16 @@
 
         <div class="content-view" onclick="closeSidebarMobile()">
             <h2 id="current-set-heading" style="color: var(--poke-yellow); margin-top: 0; font-size: 18px;">Chargement...</h2>
+            
+            <div class="market-banner">
+                🗂️ <strong>Gestion de ton classeur virtuel :</strong><br>
+                Parcours les différentes extensions officielles Pokémon et gère ton inventaire facilement :
+                <ul>
+                    <li>Clique sur le bouton <strong>✓</strong> d'une carte pour l'ajouter ou la retirer instantanément de ta collection.</li>
+                    <li>Clique au centre d'une carte pour ouvrir sa **vue détaillée en 3D** (bouge ta souris ou ton doigt pour l'effet brillant, clique pour voir le verso !).</li>
+                </ul>
+            </div>
+
             <div class="grid-cards" id="cards-container"></div>
         </div>
     </div>
@@ -286,16 +255,30 @@
                         <img id="modal-img-front" src="" alt="Front">
                     </div>
                     <div class="card-side card-back-side">
-                        <img src="https://assets.tcgdex.net/cardback.png" alt="Dos Pokémon" onerror="this.src='https://images.pokemontcg.io/cel25/25_hierarchy.png'">
+                        <img src="https://assets.tcgdex.net/cardback.png" alt="Dos Pokémon">
                     </div>
                 </div>
             </div>
             <div class="modal-controls">
                 <div class="modal-card-title" id="modal-card-title">-</div>
-                <div class="modal-card-price" id="modal-card-price">0.00 €</div>
-                <button class="btn-action btn-toggle-owned" id="modal-btn-collect">Ajouter</button>
-                <button class="btn-action btn-close-modal" id="modal-btn-close">Fermer</button>
-                <div class="hint-text">✨ Bouge / Glisse pour faire briller • Clique pour retourner !</div>
+                <div class="modal-card-subtitle">Fiche technique de la carte</div>
+
+                <table class="info-table">
+                    <tr>
+                        <td class="title">Identifiant technique</td>
+                        <td class="value" id="modal-data-id" style="font-family:monospace;">...</td>
+                    </tr>
+                    <tr>
+                        <td class="title">Numéro dans la série</td>
+                        <td class="value" id="modal-data-localid">...</td>
+                    </tr>
+                </table>
+
+                <div class="actions-row">
+                    <button class="btn-action btn-toggle-owned" id="modal-btn-collect">Ajouter</button>
+                    <button class="btn-action btn-close-modal" id="modal-btn-close">Fermer</button>
+                </div>
+                <div class="hint-text">✨ Glisse pour briller • Clique pour retourner !</div>
             </div>
         </div>
     </div>
@@ -303,25 +286,31 @@
     <script>
         const API_URL = 'https://api.tcgdex.net/v2/fr';
         let allSets = [];
-        let ownedCards = JSON.parse(localStorage.getItem('pokemon_3d_binder')) || {};
+        let ownedCards = JSON.parse(localStorage.getItem('pokemon_3d_binder_v4_clean')) || {};
         let activeCardData = null;
         let isCardFlipped = false;
-        let currentRenderTimeout = null;
+        
+        // L'IntersectionObserver sert désormais uniquement à charger l'affichage classique si nécessaire
+        const cardObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { rootMargin: '200px' });
 
-        // FONCTIONS RESPONSIVES POUR LE MENU LATÉRAL
         function toggleSidebar() {
             document.getElementById('sidebar-menu').classList.toggle('open');
         }
 
         function closeSidebarMobile() {
-            // Ferme le menu si on clique sur la zone des cartes (uniquement sur mobile)
             if(window.innerWidth <= 768) {
                 document.getElementById('sidebar-menu').classList.remove('open');
             }
         }
 
         async function loadSets() {
-            const localCache = localStorage.getItem('pokemon_sets_v3_cache');
+            const localCache = localStorage.getItem('pokemon_sets_v4_clean_cache');
             if (localCache) {
                 allSets = JSON.parse(localCache);
                 renderSets(allSets);
@@ -332,18 +321,15 @@
             try {
                 const response = await fetch(`${API_URL}/sets`);
                 const data = await response.json();
-                
                 allSets = data.sort((a, b) => new Date(a.releaseDate || '1970-01-01') - new Date(b.releaseDate || '1970-01-01'));
-                localStorage.setItem('pokemon_sets_v3_cache', JSON.stringify(allSets));
+                localStorage.setItem('pokemon_sets_v4_clean_cache', JSON.stringify(allSets));
                 
                 if (!localCache) {
                     renderSets(allSets);
                     updateGlobalStats();
                     if(allSets.length > 0) selectSet(allSets[0].id, allSets[0].name);
                 }
-            } catch (error) {
-                console.error(error);
-            }
+            } catch (error) { console.error(error); }
         }
 
         function renderSets(sets) {
@@ -355,10 +341,7 @@
                 const btn = document.createElement('button');
                 btn.className = 'set-item';
                 btn.id = `set-${set.id}`;
-                btn.onclick = () => {
-                    selectSet(set.id, set.name);
-                    closeSidebarMobile(); // Ferme auto le menu sur mobile après sélection
-                };
+                btn.onclick = () => { selectSet(set.id, set.name); closeSidebarMobile(); };
 
                 const logo = document.createElement('img');
                 logo.className = 'set-logo';
@@ -377,11 +360,11 @@
         }
 
         async function selectSet(setId, setName) {
-            if (currentRenderTimeout) clearTimeout(currentRenderTimeout);
+            cardObserver.disconnect(); 
             
             document.getElementById('current-set-heading').innerText = setName;
             const cardsContainer = document.getElementById('cards-container');
-            cardsContainer.innerHTML = '<div class="loading-text">Chargement instantané...</div>';
+            cardsContainer.innerHTML = '<div class="loading-text">Création du classeur...</div>';
 
             document.querySelectorAll('.set-item').forEach(btn => btn.classList.remove('active'));
             const activeBtn = document.getElementById(`set-${setId}`);
@@ -399,101 +382,63 @@
                     return;
                 }
 
-                let currentIndex = 0;
-                const batchSize = 24;
+                const fragment = document.createDocumentFragment();
 
-                function renderBatch() {
-                    const fragment = document.createDocumentFragment();
-                    const limit = Math.min(currentIndex + batchSize, cards.length);
+                cards.forEach(card => {
+                    const isOwned = ownedCards[card.id] !== undefined;
+                    const imgUrl = card.image ? `${card.image}/low.jpg` : 'https://assets.tcgdex.net/cardback.png';
 
-                    for (let i = currentIndex; i < limit; i++) {
-                        const card = cards[i];
-                        const isOwned = ownedCards[card.id] !== undefined;
-                        const price = calculateVFPrice(card.name, card.localId, totalCards, setId);
-                        const imgUrl = card.image ? `${card.image}/low.jpg` : 'https://assets.tcgdex.net/cardback.png';
+                    const cardNode = document.createElement('div');
+                    cardNode.className = `card-container ${isOwned ? 'owned' : 'not-owned'}`;
+                    cardNode.id = `grid-card-${card.id}`;
+                    cardNode.dataset.cardid = card.id;
 
-                        const cardNode = document.createElement('div');
-                        cardNode.className = `card-container ${isOwned ? 'owned' : 'not-owned'}`;
-                        cardNode.id = `grid-card-${card.id}`;
+                    cardNode.innerHTML = `
+                        <div class="quick-check" id="check-${card.id}">✓</div>
+                        <img class="card-img" src="${imgUrl}" alt="${card.name}" loading="lazy" onerror="this.src='https://assets.tcgdex.net/cardback.png'">
+                        <div class="card-info">${card.localId}/${totalCards} - ${card.name}</div>
+                    `;
 
-                        cardNode.innerHTML = `
-                            <div class="quick-check" id="check-${card.id}">✓</div>
-                            <img class="card-img" src="${imgUrl}" alt="${card.name}" loading="lazy" onerror="this.src='https://assets.tcgdex.net/cardback.png'">
-                            <div class="card-info">${card.localId}/${totalCards} - ${card.name}</div>
-                            <div class="card-price-tag">${price.toFixed(2)} €</div>
-                        `;
+                    cardNode.onclick = (e) => {
+                        if(e.target.classList.contains('quick-check')) {
+                            e.stopPropagation();
+                            toggleCardOwned(card.id);
+                        } else {
+                            openCardModal(card, imgUrl, totalCards);
+                        }
+                    };
 
-                        cardNode.onclick = (e) => {
-                            if(e.target.classList.contains('quick-check')) {
-                                e.stopPropagation();
-                                toggleCardOwned(card.id, price);
-                            } else {
-                                openCardModal(card, imgUrl, price);
-                            }
-                        };
+                    fragment.appendChild(cardNode);
+                    cardObserver.observe(cardNode);
+                });
 
-                        fragment.appendChild(cardNode);
-                    }
-
-                    cardsContainer.appendChild(fragment);
-                    currentIndex += batchSize;
-
-                    if (currentIndex < cards.length) {
-                        currentRenderTimeout = setTimeout(renderBatch, 16);
-                    }
-                }
-                renderBatch();
+                cardsContainer.appendChild(fragment);
 
             } catch (error) {
                 console.error(error);
-                cardsContainer.innerHTML = '<div class="loading-text" style="color:red;">Erreur.</div>';
+                cardsContainer.innerHTML = '<div class="loading-text" style="color:red;">Erreur réseau lors du chargement.</div>';
             }
         }
 
-        function calculateVFPrice(name, localId, totalCards, setId) {
-            let basePrice = 0.20;
-            const lowerName = name ? name.toLowerCase() : '';
-            const idNum = parseInt(localId);
-            const totalNum = parseInt(totalCards);
-
-            if (lowerName.includes("dracaufeu")) basePrice += 45.00;
-            else if (lowerName.includes("tortank") || lowerName.includes("florizarre")) basePrice += 15.00;
-            else if (lowerName.includes("pikachu")) basePrice += 5.00;
-            else if (lowerName.includes("ectoplasma")) basePrice += 18.00;
-
-            if (lowerName.includes(" ex") || lowerName.endsWith("ex") || lowerName.includes(" vmax") || lowerName.includes(" vstar")) basePrice += 8.00;
-            else if (lowerName.includes(" v") || lowerName.endsWith(" v")) basePrice += 3.00;
-
-            if (!isNaN(idNum) && !isNaN(totalNum) && idNum > totalNum) basePrice += 40.00;
-            else if (setId === "base1" && !isNaN(idNum) && idNum <= 16) basePrice += 50.00;
-
-            let hash = 0;
-            if(name) {
-                for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            return basePrice + (Math.abs(hash) % 150) / 100;
-        }
-
-        function toggleCardOwned(cardId, price) {
+        function toggleCardOwned(cardId) {
             const gridCard = document.getElementById(`grid-card-${cardId}`);
+            
             if (ownedCards[cardId] !== undefined) {
                 delete ownedCards[cardId];
                 if(gridCard) { gridCard.classList.remove('owned'); gridCard.classList.add('not-owned'); }
             } else {
-                ownedCards[cardId] = price;
+                ownedCards[cardId] = true;
                 if(gridCard) { gridCard.classList.remove('not-owned'); gridCard.classList.add('owned'); }
             }
-            localStorage.setItem('pokemon_3d_binder', JSON.stringify(ownedCards));
+            
+            localStorage.setItem('pokemon_3d_binder_v4_clean', JSON.stringify(ownedCards));
             updateGlobalStats();
             updateModalButtonState(cardId);
         }
 
         function updateGlobalStats() {
             const count = Object.keys(ownedCards).length;
-            let totalMoney = 0;
-            Object.values(ownedCards).forEach(p => totalMoney += Number(p) || 0);
-            document.getElementById('total-stats').innerText = `Possédées : ${count}`;
-            document.getElementById('total-value').innerText = `${totalMoney.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €`;
+            document.getElementById('total-stats').innerText = `Cartes possédées : ${count}`;
         }
 
         const modal = document.getElementById('card-modal');
@@ -501,13 +446,15 @@
         const cardInner3d = document.getElementById('card-inner-3d');
         const holoLayer = document.getElementById('modal-holo-layer');
 
-        function openCardModal(card, imgUrl, price) {
-            activeCardData = { id: card.id, price: price };
+        async function openCardModal(card, imgUrl, totalCards) {
+            activeCardData = { id: card.id };
             isCardFlipped = false;
             
             document.getElementById('modal-img-front').src = imgUrl;
             document.getElementById('modal-card-title').innerText = card.name;
-            document.getElementById('modal-card-price').innerText = `${price.toFixed(2)} €`;
+            
+            document.getElementById('modal-data-id').innerText = card.id;
+            document.getElementById('modal-data-localid').innerText = `${card.localId} / ${totalCards || '?'}`;
             
             cardInner3d.style.transform = 'rotateY(0deg) rotateX(0deg)';
             holoLayer.style.opacity = '0';
@@ -520,48 +467,34 @@
             const btn = document.getElementById('modal-btn-collect');
             if(!btn) return;
             if (ownedCards[cardId] !== undefined) {
-                btn.innerText = "✓ Retirer";
+                btn.innerText = "✓ Retirer du classeur";
                 btn.classList.add('is-owned');
             } else {
-                btn.innerText = "Ajouter";
+                btn.innerText = "Ajouter au classeur";
                 btn.classList.remove('is-owned');
             }
         }
 
-        // Support souris ET tactile (Touch) pour l'effet 3D
-        function handleMove(clientX, clientY) {
+        viewport3d.addEventListener('mousemove', (e) => {
             const rect = viewport3d.getBoundingClientRect();
-            const x = clientX - rect.left - rect.width / 2;
-            const y = clientY - rect.top - rect.height / 2;
-            
+            const x = e.clientX - rect.left - rect.width / 2;
+            const y = e.clientY - rect.top - rect.height / 2;
             const tiltX = -y / 4; 
             const tiltY = x / 4;
-            
             const baseFlip = isCardFlipped ? 180 : 0;
             cardInner3d.style.transform = `rotateX(${tiltX}deg) rotateY(${baseFlip + tiltY}deg)`;
 
             if (!isCardFlipped) {
-                const px = ((clientX - rect.left) / rect.width) * 100;
-                const py = ((clientY - rect.top) / rect.height) * 100;
+                const px = ((e.clientX - rect.left) / rect.width) * 100;
+                const py = ((e.clientY - rect.top) / rect.height) * 100;
                 holoLayer.style.opacity = '0.55';
                 holoLayer.style.backgroundPosition = `${px}% ${py}%`;
             } else {
                 holoLayer.style.opacity = '0';
             }
-        }
-
-        viewport3d.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
-        viewport3d.addEventListener('touchmove', (e) => {
-            if(e.touches.length > 0) {
-                handleMove(e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, {passive: true});
+        });
 
         viewport3d.addEventListener('mouseleave', () => {
-            cardInner3d.style.transform = isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
-            holoLayer.style.opacity = '0';
-        });
-        viewport3d.addEventListener('touchend', () => {
             cardInner3d.style.transform = isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
             holoLayer.style.opacity = '0';
         });
@@ -573,8 +506,9 @@
         });
 
         document.getElementById('modal-btn-collect').onclick = () => {
-            if(activeCardData) toggleCardOwned(activeCardData.id, activeCardData.price);
+            if(activeCardData) toggleCardOwned(activeCardData.id);
         };
+        
         document.getElementById('modal-btn-close').onclick = () => modal.style.display = 'none';
         modal.onclick = (e) => { if(e.target === modal) modal.style.display = 'none'; };
 
