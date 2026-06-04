@@ -78,6 +78,22 @@
             border: 1px solid #444; background-color: #2b2b2b; color: white; box-sizing: border-box;
         }
 
+        /* Style pour la zone de recherche des cartes au centre */
+        .card-search-wrapper {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .card-search-box {
+            flex: 1; padding: 12px 18px; border-radius: 25px;
+            border: 2px solid #333; background-color: #1e1e1e; color: white;
+            box-sizing: border-box; font-size: 14px; transition: border-color 0.2s;
+        }
+        .card-search-box:focus {
+            outline: none;
+            border-color: var(--poke-blue);
+        }
+
         .set-list { flex: 1; overflow-y: auto; padding: 8px; }
 
         .set-item {
@@ -176,7 +192,6 @@
         .modal-card-title { font-size: 22px; font-weight: bold; margin-bottom: 2px; color: #fff; }
         .modal-card-subtitle { font-size: 12px; color: #888; margin-bottom: 12px; font-style: italic; }
 
-        /* Bloc des vrais prix du marché */
         .range-box {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid #333;
@@ -258,6 +273,10 @@
                     <li>Clique sur le bouton <strong>✓</strong> d'une carte pour l'ajouter ou la retirer instantanément de ta collection.</li>
                     <li>Clique au centre d'une carte pour ouvrir sa **vue détaillée en 3D** et consulter ses prix réels du marché Cardmarket.</li>
                 </ul>
+            </div>
+
+            <div class="card-search-wrapper">
+                <input type="text" id="card-search-input" class="card-search-box" placeholder="🔍 Rechercher une carte précise dans cette extension par son nom...">
             </div>
 
             <div class="grid-cards" id="cards-container"></div>
@@ -392,6 +411,9 @@
         async function selectSet(setId, setName) {
             cardObserver.disconnect(); 
             
+            // On vide le champ de recherche de carte à chaque changement d'extension
+            document.getElementById('card-search-input').value = '';
+
             document.getElementById('current-set-heading').innerText = setName;
             const cardsContainer = document.getElementById('cards-container');
             cardsContainer.innerHTML = '<div class="loading-text">Création du classeur...</div>';
@@ -422,6 +444,8 @@
                     cardNode.className = `card-container ${isOwned ? 'owned' : 'not-owned'}`;
                     cardNode.id = `grid-card-${card.id}`;
                     cardNode.dataset.cardid = card.id;
+                    // On stocke le nom de la carte en minuscule pour faciliter le filtrage
+                    cardNode.dataset.cardname = card.name.toLowerCase();
 
                     cardNode.innerHTML = `
                         <div class="quick-check" id="check-${card.id}">✓</div>
@@ -579,10 +603,26 @@
         document.getElementById('modal-btn-close').onclick = () => modal.style.display = 'none';
         modal.onclick = (e) => { if(e.target === modal) modal.style.display = 'none'; };
 
+        // Événement pour la recherche d'une EXTENSION (colonne de gauche)
         document.getElementById('search-input').addEventListener('input', (e) => {
             const search = e.target.value.toLowerCase();
             const filtered = allSets.filter(set => set.name.toLowerCase().includes(search));
             renderSets(filtered);
+        });
+
+        // Événement pour la recherche d'une CARTE (zone centrale)
+        document.getElementById('card-search-input').addEventListener('input', (e) => {
+            const searchVal = e.target.value.toLowerCase();
+            const allGridCards = document.querySelectorAll('.card-container');
+            
+            allGridCards.forEach(cardNode => {
+                const name = cardNode.dataset.cardname || '';
+                if(name.includes(searchVal)) {
+                    cardNode.style.display = 'block'; // Affiche la carte si elle correspond
+                } else {
+                    cardNode.style.display = 'none';  // Masque la carte sinon
+                }
+            });
         });
 
         window.onload = loadSets;
