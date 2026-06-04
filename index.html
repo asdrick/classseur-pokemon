@@ -13,6 +13,7 @@
             --card-bg: #1e1e1e;
             --text-light: #e0e0e0;
             --info-blue: #0288d1;
+            --money-green: #4caf50;
         }
 
         body {
@@ -175,6 +176,22 @@
         .modal-card-title { font-size: 22px; font-weight: bold; margin-bottom: 2px; color: #fff; }
         .modal-card-subtitle { font-size: 12px; color: #888; margin-bottom: 12px; font-style: italic; }
 
+        /* Bloc des vrais prix du marché */
+        .range-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        .range-item .label { font-size: 11px; color: #aaa; text-transform: uppercase; margin-bottom: 4px; }
+        .range-item .val { font-size: 20px; font-weight: bold; }
+        .range-item.min .val { color: #ff9800; }
+        .range-item.max .val { color: var(--money-green); }
+
         .info-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; font-size: 13px; color: #ccc; }
         .info-table td { padding: 8px 0; border-bottom: 1px solid #2d2d2d; }
         .info-table td.title { font-weight: bold; }
@@ -207,6 +224,7 @@
             .modal-content { flex-direction: column; gap: 15px; padding: 15px; max-width: 330px; margin: auto; }
             .card-3d-viewport { width: 190px; height: 265px; }
             .modal-card-title { font-size: 18px; text-align: center; margin-bottom: 2px; }
+            .range-item .val { font-size: 16px; }
         }
     </style>
 </head>
@@ -238,7 +256,7 @@
                 Parcours les différentes extensions officielles Pokémon et gère ton inventaire facilement :
                 <ul>
                     <li>Clique sur le bouton <strong>✓</strong> d'une carte pour l'ajouter ou la retirer instantanément de ta collection.</li>
-                    <li>Clique au centre d'une carte pour ouvrir sa **vue détaillée en 3D** (bouge ta souris ou ton doigt pour l'effet brillant, clique pour voir le verso !).</li>
+                    <li>Clique au centre d'une carte pour ouvrir sa **vue détaillée en 3D** et consulter ses prix réels du marché Cardmarket.</li>
                 </ul>
             </div>
 
@@ -261,7 +279,19 @@
             </div>
             <div class="modal-controls">
                 <div class="modal-card-title" id="modal-card-title">-</div>
-                <div class="modal-card-subtitle">Fiche technique de la carte</div>
+                <div class="modal-card-subtitle">Cotation Marché Réel — Carte Non Gradée</div>
+
+                <div class="range-box">
+                    <div class="range-item min">
+                        <div class="label">Prix Minimum (Low)</div>
+                        <div class="val" id="modal-range-min">...</div>
+                    </div>
+                    <div class="range-item" style="display: flex; align-items: center; font-size: 20px; color: #555;">➔</div>
+                    <div class="range-item max">
+                        <div class="label">Maximum Réel</div>
+                        <div class="val" id="modal-range-max">...</div>
+                    </div>
+                </div>
 
                 <table class="info-table">
                     <tr>
@@ -289,8 +319,8 @@
         let ownedCards = JSON.parse(localStorage.getItem('pokemon_3d_binder_v4_clean')) || {};
         let activeCardData = null;
         let isCardFlipped = false;
+        let globalPriceCache = {}; 
         
-        // L'IntersectionObserver sert désormais uniquement à charger l'affichage classique si nécessaire
         const cardObserver = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -420,6 +450,27 @@
             }
         }
 
+        async function fetchRealRangePrice(cardId) {
+            try {
+                const response = await fetch(`${API_URL}/cards/${cardId}`);
+                const data = await response.json();
+                
+                let minPrice = 0.05;
+                let maxPrice = 0.10;
+
+                if (data.pricing && data.pricing.cardmarket) {
+                    const cm = data.pricing.cardmarket;
+                    minPrice = cm.low || 0.05;
+                    maxPrice = Math.max(cm.trend || 0, cm.avg || 0, cm.low || 0) || 0.10;
+                    if(minPrice >= maxPrice) maxPrice = minPrice + 0.10;
+                }
+
+                globalPriceCache[cardId] = { min: minPrice, max: maxPrice };
+            } catch (error) {
+                globalPriceCache[cardId] = { min: 0, max: 0 };
+            }
+        }
+
         function toggleCardOwned(cardId) {
             const gridCard = document.getElementById(`grid-card-${cardId}`);
             
@@ -456,11 +507,27 @@
             document.getElementById('modal-data-id').innerText = card.id;
             document.getElementById('modal-data-localid').innerText = `${card.localId} / ${totalCards || '?'}`;
             
+            document.getElementById('modal-range-min').innerText = "...";
+            document.getElementById('modal-range-max').innerText = "...";
+            
             cardInner3d.style.transform = 'rotateY(0deg) rotateX(0deg)';
             holoLayer.style.opacity = '0';
             
             updateModalButtonState(card.id);
             modal.style.display = 'flex';
+
+            if (!globalPriceCache[card.id]) {
+                await fetchRealRangePrice(card.id);
+            }
+            
+            const p = globalPriceCache[card.id];
+            if (p && p.min > 0) {
+                document.getElementById('modal-range-min').innerText = `${p.min.toFixed(2)} €`;
+                document.getElementById('modal-range-max').innerText = `${p.max.toFixed(2)} €`;
+            } else {
+                document.getElementById('modal-range-min').innerText = "-- €";
+                document.getElementById('modal-range-max').innerText = "-- €";
+            }
         }
 
         function updateModalButtonState(cardId) {
